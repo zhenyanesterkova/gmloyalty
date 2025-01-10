@@ -1,6 +1,6 @@
 # Options for analysis running.
 run:
-  go: "1.22"
+  go: "1.23"
   # Settable parameters #
   timeout: 5m
   tests: true
@@ -23,10 +23,8 @@ run:
   allow-parallel-runners: false
 
   # Disabled parameters  #
-
   # The default concurrency value is the number of available CPU.
   # concurrency:
-
   # Define the Go version limit.
   # Mainly related to generics support since go1.18.
   # Default: use Go version from the go.mod file, fallback on the env var `GOVERSION`, fallback on 1.18
@@ -40,8 +38,6 @@ output:
   print-issued-lines: true
   # Print linter name in the end of issue text.
   print-linter-name: true
-  # Make issues output unique by line.
-  uniq-by-line: true
   # Add a prefix to the output file references.
   path-prefix: ""
   # Sort results by: filepath, line and column.
@@ -560,6 +556,7 @@ issues:
   fix: false
   max-issues-per-linter: 0
   max-same-issues: 0
+  uniq-by-line: false
 
   # Invariable parameters #
 
@@ -572,10 +569,8 @@ issues:
   exclude-use-default: false
 
   # Disabled parameters  #
-
   # Show only new issues created after git revision `REV`.
   # new-from-rev:
-
   # Show only new issues created in git patch with set file path.
   # new-from-patch:
 

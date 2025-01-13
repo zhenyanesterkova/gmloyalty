@@ -1,6 +1,6 @@
 module github.com/zhenyanesterkova/gmloyalty
 
-go 1.23.4
+go 1.22.0
 
 require (
 	github.com/golang-migrate/migrate/v4 v4.18.1

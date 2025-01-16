@@ -30,9 +30,9 @@ func New() *Config {
 }
 
 func (c *Config) Build() error {
-	c.flagBuild()
-
 	c.envBuild()
+
+	c.flagBuild()
 
 	if c.DBConfig.DSN == "" {
 		return fmt.Errorf("error build config: %w", errors.New("database source name is empty"))

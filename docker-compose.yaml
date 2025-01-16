@@ -1,0 +1,48 @@
+services:
+  loyaltyDB:
+    container_name: loyaltyDB
+    image: postgres:17.2
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U gopher -d gopherloyalty" ]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: gopherloyalty
+      POSTGRES_PASSWORD: "Prakt!kumPWD"
+      PGDATA: "/var/lib/postgresql/data"
+    volumes:
+      - "./db/init:/docker-entrypoint-initdb.d"
+      - "postgres:/var/lib/postgresql/data"
+    ports:
+      - "5432:5432"
+    networks:
+      - gmloyalty
+    restart: always
+
+  loyalty:
+    container_name: loyalty
+    build:
+      context: .
+      dockerfile: build/Dockerfile.server
+    depends_on:
+      loyaltyDB:
+        condition: service_healthy
+    ports:
+      - 8083:8083
+    environment:
+      ADDRESS: "0.0.0.0:8083"
+      DATABASE_DSN: "postgres://gopher:gopher@loyaltyDB:5432/gopherloyalty?sslmode=disable"
+    networks:
+      - gmloyalty
+    restart: always
+
+volumes:
+  postgres:
+
+
+networks:
+  gmloyalty:
+    driver: bridge

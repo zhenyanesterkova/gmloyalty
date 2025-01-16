@@ -25,7 +25,7 @@ CREATE TABLE history(
     sum DOUBLE PRECISION NOT NULL,
     item_type VARCHAR(200) NOT NULL,
     item_timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    order_num VARCHAR(200) UNIQUE NOT NULL PRIMARY KEY
+    order_num VARCHAR(200) UNIQUE NOT NULL
 );
 
 CREATE INDEX user_login ON users (user_login);

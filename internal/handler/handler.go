@@ -1,19 +1,24 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/zhenyanesterkova/gmloyalty/internal/middleware"
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/logger"
+	"github.com/zhenyanesterkova/gmloyalty/internal/service/user"
 )
 
 const (
 	TextServerError = "Something went wrong... Server error"
+	TextLoginError  = "User with this login already exists"
 )
 
 type Repositorie interface {
 	Ping() error
+	Register(ctx context.Context, user user.User) error
 }
 
 type RepositorieHandler struct {
@@ -41,6 +46,9 @@ func (rh *RepositorieHandler) InitChiRouter(router *chi.Mux) {
 	router.Use(mdlWare.GZipMiddleware)
 	router.Route("/", func(r chi.Router) {
 		r.Get("/ping", rh.Ping)
+		r.Route("/api/user/", func(r chi.Router) {
+			r.Post("/register", rh.Register)
+		})
 	})
 }
 

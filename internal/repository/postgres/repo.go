@@ -10,7 +10,9 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/logger"
+	"github.com/zhenyanesterkova/gmloyalty/internal/service/user"
 )
 
 type PostgresStorage struct {
@@ -51,6 +53,14 @@ func runMigrations(dsn string) error {
 		}
 	}
 	return nil
+}
+
+func (psg *PostgresStorage) Register(user user.User) {
+
+}
+
+func (psg *PostgresStorage) Login(user user.User) {
+
 }
 
 func (psg *PostgresStorage) Ping() error {

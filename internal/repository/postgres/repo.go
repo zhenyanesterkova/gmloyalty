@@ -10,6 +10,7 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/sirupsen/logrus"
 
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/logger"
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/user"
@@ -55,8 +56,36 @@ func runMigrations(dsn string) error {
 	return nil
 }
 
-func (psg *PostgresStorage) Register(user user.User) {
+func (psg *PostgresStorage) Register(ctx context.Context, user user.User) error {
+	log := psg.log.LogrusLog
 
+	hashPassWD, err := user.HashPassword()
+	if err != nil {
+		return fmt.Errorf("failed calc hash password: %w", err)
+	}
+
+	row := psg.pool.QueryRow(
+		context.TODO(),
+		`INSERT INTO users (user_login, hashed_password)
+			VALUES ($1, $2)
+			RETURNING id;
+			`,
+		user.Login,
+		hashPassWD,
+	)
+
+	var id string
+	err = row.Scan(&id)
+	if err != nil {
+		return fmt.Errorf("failed to scan row when create user: %w", err)
+	}
+	log.WithFields(logrus.Fields{
+		"id":           id,
+		"login":        user.Login,
+		"hashPassword": hashPassWD,
+	}).Debug("register user")
+
+	return nil
 }
 
 func (psg *PostgresStorage) Login(user user.User) {

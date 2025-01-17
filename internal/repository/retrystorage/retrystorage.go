@@ -1,6 +1,7 @@
 package retrystorage
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/zhenyanesterkova/gmloyalty/internal/repository"
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/backoff"
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/logger"
+	"github.com/zhenyanesterkova/gmloyalty/internal/service/user"
 )
 
 type RetryStorage struct {
@@ -49,6 +51,23 @@ func New(
 
 	retryStore.storage = store
 	return retryStore, nil
+}
+
+func (rs *RetryStorage) Register(ctx context.Context, user user.User) error {
+	err := rs.storage.Register(ctx, user)
+	if rs.checkRetry(err) {
+		err = rs.retry(func() error {
+			err = rs.storage.Register(ctx, user)
+			if err != nil {
+				return fmt.Errorf("failed retry register user: %w", err)
+			}
+			return nil
+		})
+	}
+	if err != nil {
+		return fmt.Errorf("failed register user: %w", err)
+	}
+	return nil
 }
 
 func (rs *RetryStorage) Ping() error {

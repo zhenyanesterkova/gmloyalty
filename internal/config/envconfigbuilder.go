@@ -5,7 +5,7 @@ import (
 )
 
 func (c *Config) setEnvServerConfig() {
-	if envEndpoint, ok := os.LookupEnv("ADDRESS"); ok {
+	if envEndpoint, ok := os.LookupEnv("RUN_ADDRESS3"); ok {
 		c.SConfig.Address = envEndpoint
 	}
 	if envHashKey, ok := os.LookupEnv("KEY"); ok {
@@ -20,7 +20,7 @@ func (c *Config) setEnvLoggerConfig() {
 }
 
 func (c *Config) setDBConfig() {
-	if dsn, ok := os.LookupEnv("DATABASE_DSN"); ok {
+	if dsn, ok := os.LookupEnv("DATABASE_URI"); ok {
 		c.DBConfig.DSN = dsn
 	}
 }

@@ -12,8 +12,9 @@ import (
 )
 
 const (
-	TextServerError = "Something went wrong... Server error"
-	TextLoginError  = "User with this login already exists"
+	TextServerError        = "Something went wrong... Server error"
+	TextLoginError         = "User with this login already exists"
+	TextInvalidFormatError = "Invalid request format"
 )
 
 type Repositorie interface {

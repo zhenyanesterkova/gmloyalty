@@ -17,8 +17,18 @@ func (rh *RepositorieHandler) Register(w http.ResponseWriter, r *http.Request) {
 	user := user.User{}
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&user); err != nil {
-		log.Errorf("handler func Register(): error decode user data - %v", err)
+		var syntaxErr *json.SyntaxError
+		if errors.As(err, &syntaxErr) {
+			http.Error(w, TextInvalidFormatError, http.StatusBadRequest)
+			return
+		}
+		log.Errorf("failed decode user: %v", err)
 		http.Error(w, TextServerError, http.StatusInternalServerError)
+		return
+	}
+
+	if user.Login == "" || user.Password == "" {
+		http.Error(w, TextInvalidFormatError, http.StatusBadRequest)
 		return
 	}
 
@@ -26,7 +36,7 @@ func (rh *RepositorieHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
-			http.Error(w, TextLoginError, http.StatusBadRequest)
+			http.Error(w, TextLoginError, http.StatusConflict)
 			return
 		}
 		log.Errorf("handler func Register(): error register user - %v", err)

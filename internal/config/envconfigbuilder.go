@@ -11,9 +11,6 @@ func (c *Config) setEnvServerConfig() {
 	if envEndpoint, ok := os.LookupEnv("RUN_ADDRESS3"); ok {
 		c.SConfig.Address = envEndpoint
 	}
-	if envHashKey, ok := os.LookupEnv("KEY"); ok {
-		c.SConfig.HashKey = &envHashKey
-	}
 }
 
 func (c *Config) setEnvLoggerConfig() {
@@ -42,6 +39,12 @@ func (c *Config) setJWTConfig() error {
 	return nil
 }
 
+func (c *Config) setClientConfig() {
+	if addr, ok := os.LookupEnv("ACCRUAL_SYSTEM_ADDRESS"); ok {
+		c.ClientConfig.Address = addr
+	}
+}
+
 func (c *Config) envBuild() error {
 	c.setEnvServerConfig()
 	c.setEnvLoggerConfig()
@@ -50,5 +53,6 @@ func (c *Config) envBuild() error {
 	if err != nil {
 		return fmt.Errorf("failed set JWT config from env: %w", err)
 	}
+	c.setClientConfig()
 	return nil
 }

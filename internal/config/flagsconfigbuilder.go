@@ -17,6 +17,13 @@ func (c *Config) setFlagsVariables() error {
 	)
 
 	flag.StringVar(
+		&c.ClientConfig.Address,
+		"r",
+		c.ClientConfig.Address,
+		"address to send request to getting information about calculating loyalty points",
+	)
+
+	flag.StringVar(
 		&c.LConfig.Level,
 		"l",
 		c.LConfig.Level,
@@ -29,14 +36,6 @@ func (c *Config) setFlagsVariables() error {
 		"d",
 		dsn,
 		"database dsn",
-	)
-
-	hashKey := ""
-	flag.StringVar(
-		&hashKey,
-		"k",
-		hashKey,
-		"hash key",
 	)
 
 	secretKey := ""
@@ -54,10 +53,6 @@ func (c *Config) setFlagsVariables() error {
 
 	if isFlagPassed("d") {
 		c.DBConfig.DSN = dsn
-	}
-
-	if isFlagPassed("k") {
-		c.SConfig.HashKey = &hashKey
 	}
 
 	if isFlagPassed("s") {

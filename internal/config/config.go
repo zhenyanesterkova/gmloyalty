@@ -7,11 +7,12 @@ import (
 )
 
 type Config struct {
-	SConfig     ServerConfig
-	DBConfig    DBConfig
-	LConfig     LoggerConfig
-	JWTConfig   JWTConfig
-	RetryConfig RetryConfig
+	SConfig      ServerConfig
+	DBConfig     DBConfig
+	LConfig      LoggerConfig
+	ClientConfig ClientConfig
+	JWTConfig    JWTConfig
+	RetryConfig  RetryConfig
 }
 
 func New() *Config {
@@ -32,6 +33,7 @@ func New() *Config {
 			TokenExp:  DefaultTokenExp * time.Hour,
 			SecretKey: DefaultSecretKey,
 		},
+		ClientConfig: ClientConfig{},
 	}
 }
 
@@ -48,6 +50,9 @@ func (c *Config) Build() error {
 
 	if c.DBConfig.DSN == "" {
 		return fmt.Errorf("error build config: %w", errors.New("database source name is empty"))
+	}
+	if c.ClientConfig.Address == "" {
+		return fmt.Errorf("error build config: %w", errors.New("url for client accrual is empty"))
 	}
 
 	return nil

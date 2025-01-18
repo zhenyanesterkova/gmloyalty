@@ -8,6 +8,7 @@ import (
 
 	"github.com/zhenyanesterkova/gmloyalty/internal/config"
 	"github.com/zhenyanesterkova/gmloyalty/internal/middleware"
+	"github.com/zhenyanesterkova/gmloyalty/internal/myclient"
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/logger"
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/session"
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/user"
@@ -28,27 +29,28 @@ type Repositorie interface {
 type RepositorieHandler struct {
 	Repo    Repositorie
 	Logger  logger.LogrusLogger
-	hashKey *string
+	accrual *myclient.AccrualStruct
 	jwtSess *session.SessionsJWT
 }
 
 func NewRepositorieHandler(
 	rep Repositorie,
 	log logger.LogrusLogger,
-	key *string,
 	cfgJWT config.JWTConfig,
+	accrualAddress string,
 ) *RepositorieHandler {
 	jwtSession := session.NewSessionsJWT(cfgJWT)
+	acc := myclient.Accrual(accrualAddress)
 	return &RepositorieHandler{
 		Repo:    rep,
 		Logger:  log,
-		hashKey: key,
 		jwtSess: jwtSession,
+		accrual: acc,
 	}
 }
 
 func (rh *RepositorieHandler) InitChiRouter(router *chi.Mux) {
-	mdlWare := middleware.NewMiddlewareStruct(rh.Logger, rh.hashKey, rh.jwtSess)
+	mdlWare := middleware.NewMiddlewareStruct(rh.Logger, rh.jwtSess)
 	router.Use(mdlWare.ResetRespDataStruct)
 	router.Use(mdlWare.RequestLogger)
 	router.Use(mdlWare.Auth)

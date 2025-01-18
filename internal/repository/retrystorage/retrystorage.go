@@ -1,6 +1,7 @@
 package retrystorage
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/zhenyanesterkova/gmloyalty/internal/repository"
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/backoff"
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/logger"
+	"github.com/zhenyanesterkova/gmloyalty/internal/service/user"
 )
 
 type RetryStorage struct {
@@ -22,6 +24,7 @@ func New(
 	loggerInst logger.LogrusLogger,
 	bf *backoff.Backoff,
 	checkRetryFunc func(error) bool,
+	cfgJWT config.JWTConfig,
 ) (
 	*RetryStorage,
 	error,
@@ -32,11 +35,11 @@ func New(
 		logger:     loggerInst,
 	}
 
-	store, err := repository.NewStore(cfg, loggerInst)
+	store, err := repository.NewStore(cfg, loggerInst, cfgJWT)
 	if err != nil {
 		if retryStore.checkRetry(err) {
 			err = retryStore.retry(func() error {
-				store, err = repository.NewStore(cfg, loggerInst)
+				store, err = repository.NewStore(cfg, loggerInst, cfgJWT)
 				if err != nil {
 					return fmt.Errorf("failed retry create storage: %w", err)
 				}
@@ -48,7 +51,42 @@ func New(
 	}
 
 	retryStore.storage = store
+
 	return retryStore, nil
+}
+
+func (rs *RetryStorage) Register(ctx context.Context, user user.User) (int, error) {
+	userID, err := rs.storage.Register(ctx, user)
+	if rs.checkRetry(err) {
+		err = rs.retry(func() error {
+			userID, err = rs.storage.Register(ctx, user)
+			if err != nil {
+				return fmt.Errorf("failed retry register user: %w", err)
+			}
+			return nil
+		})
+	}
+	if err != nil {
+		return 0, fmt.Errorf("failed register user: %w", err)
+	}
+	return userID, nil
+}
+
+func (rs *RetryStorage) Login(user user.User) (int, error) {
+	userID, err := rs.storage.Login(user)
+	if rs.checkRetry(err) {
+		err = rs.retry(func() error {
+			userID, err = rs.storage.Login(user)
+			if err != nil {
+				return fmt.Errorf("failed retry login user: %w", err)
+			}
+			return nil
+		})
+	}
+	if err != nil {
+		return 0, fmt.Errorf("failed login user: %w", err)
+	}
+	return userID, nil
 }
 
 func (rs *RetryStorage) Ping() error {

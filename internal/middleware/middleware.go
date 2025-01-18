@@ -4,15 +4,17 @@ import (
 	"net/http"
 
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/logger"
+	"github.com/zhenyanesterkova/gmloyalty/internal/service/session"
 )
 
 type MiddlewareStruct struct {
 	Logger   logger.LogrusLogger
 	hashKey  *string
 	respData *responseDataWriter
+	jwtSess  *session.SessionsJWT
 }
 
-func NewMiddlewareStruct(log logger.LogrusLogger, key *string) MiddlewareStruct {
+func NewMiddlewareStruct(log logger.LogrusLogger, key *string, jwtSess *session.SessionsJWT) MiddlewareStruct {
 	responseData := &responseData{
 		status:  0,
 		size:    0,
@@ -27,6 +29,7 @@ func NewMiddlewareStruct(log logger.LogrusLogger, key *string) MiddlewareStruct 
 		Logger:   log,
 		hashKey:  key,
 		respData: &lw,
+		jwtSess:  jwtSess,
 	}
 }
 

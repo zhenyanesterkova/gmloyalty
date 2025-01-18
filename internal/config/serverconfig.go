@@ -5,6 +5,5 @@ const (
 )
 
 type ServerConfig struct {
-	HashKey *string
 	Address string
 }

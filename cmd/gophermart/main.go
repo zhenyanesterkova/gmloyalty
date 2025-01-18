@@ -80,7 +80,7 @@ func run() error {
 
 	router := chi.NewRouter()
 
-	repoHandler := handler.NewRepositorieHandler(retryStore, loggerInst, cfg.SConfig.HashKey, cfg.JWTConfig)
+	repoHandler := handler.NewRepositorieHandler(retryStore, loggerInst, cfg.JWTConfig, cfg.ClientConfig.Address)
 
 	repoHandler.InitChiRouter(router)
 

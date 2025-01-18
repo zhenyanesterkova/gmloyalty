@@ -6,9 +6,8 @@ import (
 )
 
 type responseData struct {
-	hashKey *string
-	status  int
-	size    int
+	status int
+	size   int
 }
 
 type responseDataWriter struct {

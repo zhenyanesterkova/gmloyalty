@@ -13,8 +13,8 @@ const (
 
 var (
 	noAuthUrls = map[string]struct{}{
-		"/api/user/register": struct{}{},
-		"/api/user/login":    struct{}{},
+		"/api/user/register": {},
+		"/api/user/login":    {},
 	}
 )
 
@@ -26,6 +26,11 @@ func (lm MiddlewareStruct) Auth(next http.Handler) http.Handler {
 		}
 
 		tokenJWT := r.Header.Get("Authorization")
+
+		if tokenJWT == "" {
+			http.Error(w, "No auth", http.StatusUnauthorized)
+			return
+		}
 
 		userID, err := lm.jwtSess.Check(tokenJWT)
 		if err != nil {

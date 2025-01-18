@@ -9,16 +9,14 @@ import (
 
 type MiddlewareStruct struct {
 	Logger   logger.LogrusLogger
-	hashKey  *string
 	respData *responseDataWriter
 	jwtSess  *session.SessionsJWT
 }
 
-func NewMiddlewareStruct(log logger.LogrusLogger, key *string, jwtSess *session.SessionsJWT) MiddlewareStruct {
+func NewMiddlewareStruct(log logger.LogrusLogger, jwtSess *session.SessionsJWT) MiddlewareStruct {
 	responseData := &responseData{
-		status:  0,
-		size:    0,
-		hashKey: key,
+		status: 0,
+		size:   0,
 	}
 
 	lw := responseDataWriter{
@@ -27,7 +25,6 @@ func NewMiddlewareStruct(log logger.LogrusLogger, key *string, jwtSess *session.
 
 	return MiddlewareStruct{
 		Logger:   log,
-		hashKey:  key,
 		respData: &lw,
 		jwtSess:  jwtSess,
 	}

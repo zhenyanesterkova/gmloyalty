@@ -8,16 +8,16 @@ CREATE TABLE users(
 
 CREATE TABLE accounts(
     id SERIAL UNIQUE NOT NULL PRIMARY KEY,
-    user_id VARCHAR(200) NOT NULL,
+    user_id INT NOT NULL,
     balance DOUBLE PRECISION NOT NULL,
     withdrawn DOUBLE PRECISION
 );
 
 CREATE TABLE orders(
-    order_num VARCHAR(200) UNIQUE NOT NULL PRIMARY KEY,
+    order_num BIGINT UNIQUE NOT NULL PRIMARY KEY,
     order_status VARCHAR(200) NOT NULL,
     upload_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    user_id VARCHAR(200) NOT NULL
+    user_id INT NOT NULL
 );
 
 CREATE TABLE history(
@@ -25,7 +25,7 @@ CREATE TABLE history(
     sum DOUBLE PRECISION NOT NULL,
     item_type VARCHAR(200) NOT NULL,
     item_timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    order_num VARCHAR(200) UNIQUE NOT NULL
+    order_num BIGINT UNIQUE NOT NULL
 );
 
 CREATE INDEX user_login ON users (user_login);

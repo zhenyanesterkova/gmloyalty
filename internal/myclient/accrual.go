@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/order"
 )
@@ -42,21 +43,38 @@ func (acc AccrualStruct) GetCalculatingPoints(orderNum int64) (order.Order, erro
 	}
 
 	resp, err := acc.client.Do(req)
+	defer func(err error) {
+		if err == nil {
+			errBodyClose := resp.Body.Close()
+			if errBodyClose != nil {
+				log.Fatalf("failed close accrual resp body - %v", errBodyClose)
+			}
+		}
+	}(err)
 	if err != nil {
 		return order.Order{}, fmt.Errorf("failed do request - %w", err)
 	}
-	defer func() {
-		errBodyClose := resp.Body.Close()
-		if errBodyClose != nil {
-			log.Fatalf("failed close accrual resp body - %v", errBodyClose)
-		}
-	}()
 
+	if resp.StatusCode == http.StatusTooManyRequests {
+		retryAfter := resp.Header.Get("Retry-After")
+		dur, errParse := time.ParseDuration(retryAfter)
+		if errParse != nil {
+			return order.Order{},
+				fmt.Errorf(`
+					the attempt to re-send req to accrual failed - the retry-after could not be parsed: %w`,
+					errParse,
+				)
+		}
+		time.Sleep(dur)
+		resp, err = acc.client.Do(req)
+		if err != nil {
+			return order.Order{}, fmt.Errorf(`failed send req to accrual: %w, attempts to re-send failed`,
+				err,
+			)
+		}
+	}
 	if resp.StatusCode == http.StatusNoContent {
 		return order.Order{}, ErrNoContent
-	}
-	if resp.StatusCode == http.StatusTooManyRequests {
-		return order.Order{}, ErrTooManyRequests
 	}
 	if resp.StatusCode == http.StatusInternalServerError {
 		return order.Order{}, ErrServer

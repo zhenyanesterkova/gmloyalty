@@ -13,11 +13,16 @@ import (
 type Store interface {
 	Close() error
 	Ping() error
-	Register(ctx context.Context, user user.User) error
+	Register(ctx context.Context, user user.User) (int, error)
+	Login(userData user.User) (int, error)
 }
 
-func NewStore(conf config.DBConfig, log logger.LogrusLogger) (Store, error) {
-	store, err := postgres.New(conf.DSN, log)
+func NewStore(
+	conf config.DBConfig,
+	log logger.LogrusLogger,
+	cfgJWT config.JWTConfig,
+) (Store, error) {
+	store, err := postgres.New(conf.DSN, log, cfgJWT)
 	if err != nil {
 		return nil, fmt.Errorf("failed create postgres storage: %w", err)
 	}

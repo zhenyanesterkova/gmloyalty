@@ -3,12 +3,14 @@ package config
 import (
 	"errors"
 	"fmt"
+	"time"
 )
 
 type Config struct {
-	DBConfig    DBConfig
 	SConfig     ServerConfig
+	DBConfig    DBConfig
 	LConfig     LoggerConfig
+	JWTConfig   JWTConfig
 	RetryConfig RetryConfig
 }
 
@@ -26,13 +28,23 @@ func New() *Config {
 			MaxDelay:   DefaultMaxRetryDelay,
 			MaxAttempt: DefaultMaxRetryAttempt,
 		},
+		JWTConfig: JWTConfig{
+			TokenExp:  DefaultTokenExp * time.Hour,
+			SecretKey: DefaultSecretKey,
+		},
 	}
 }
 
 func (c *Config) Build() error {
-	c.envBuild()
+	err := c.envBuild()
+	if err != nil {
+		return fmt.Errorf("error build env config: %w", err)
+	}
 
-	c.flagBuild()
+	err = c.flagBuild()
+	if err != nil {
+		return fmt.Errorf("error build flags config: %w", err)
+	}
 
 	if c.DBConfig.DSN == "" {
 		return fmt.Errorf("error build config: %w", errors.New("database source name is empty"))

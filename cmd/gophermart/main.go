@@ -59,7 +59,13 @@ func run() error {
 		return res
 	}
 
-	retryStore, err := retrystorage.New(cfg.DBConfig, loggerInst, backoffInst, checkRetryFunc)
+	retryStore, err := retrystorage.New(
+		cfg.DBConfig,
+		loggerInst,
+		backoffInst,
+		checkRetryFunc,
+		cfg.JWTConfig,
+	)
 	if err != nil {
 		loggerInst.LogrusLog.Errorf("failed create storage: %v", err)
 		return fmt.Errorf("failed create storage: %w", err)
@@ -73,7 +79,7 @@ func run() error {
 
 	router := chi.NewRouter()
 
-	repoHandler := handler.NewRepositorieHandler(retryStore, loggerInst, cfg.SConfig.HashKey)
+	repoHandler := handler.NewRepositorieHandler(retryStore, loggerInst, cfg.SConfig.HashKey, cfg.JWTConfig)
 	repoHandler.InitChiRouter(router)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)

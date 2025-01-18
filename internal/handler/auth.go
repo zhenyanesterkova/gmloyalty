@@ -6,40 +6,46 @@ import (
 	"net/http"
 
 	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/user"
 )
 
-func (rh *RepositorieHandler) Register(w http.ResponseWriter, r *http.Request) {
+func (rh *RepositorieHandler) Login(w http.ResponseWriter, r *http.Request) {
 	log := rh.Logger.LogrusLog
 
-	user := user.User{}
+	userData := user.User{}
 	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&user); err != nil {
+	if err := decoder.Decode(&userData); err != nil {
 		var syntaxErr *json.SyntaxError
 		if errors.As(err, &syntaxErr) {
 			http.Error(w, TextInvalidFormatError, http.StatusBadRequest)
 			return
 		}
-		log.Errorf("failed decode user: %v", err)
 		http.Error(w, TextServerError, http.StatusInternalServerError)
 		return
 	}
 
-	if user.Login == "" || user.Password == "" {
+	if userData.Login == "" || userData.Password == "" {
 		http.Error(w, TextInvalidFormatError, http.StatusBadRequest)
 		return
 	}
 
-	userID, err := rh.Repo.Register(r.Context(), user)
+	userID, err := rh.Repo.Login(userData)
 	if err != nil {
 		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
-			http.Error(w, TextLoginError, http.StatusConflict)
+		switch {
+		case errors.As(err, &pgErr) && pgerrcode.IsNoData(pgErr.Code):
+		case errors.Is(err, pgx.ErrNoRows):
+			http.Error(w, "No user", http.StatusBadRequest)
+			return
+		case errors.Is(err, user.ErrBadPass):
+			log.Debug(err)
+			http.Error(w, "Invalid username/password", http.StatusUnauthorized)
 			return
 		}
-		log.Errorf("handler func Register(): error register user - %v", err)
+		log.Errorf("failed login user: %v", err)
 		http.Error(w, TextServerError, http.StatusInternalServerError)
 		return
 	}

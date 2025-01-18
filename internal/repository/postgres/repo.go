@@ -10,8 +10,8 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/sirupsen/logrus"
 
+	"github.com/zhenyanesterkova/gmloyalty/internal/config"
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/logger"
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/user"
 )
@@ -21,7 +21,11 @@ type PostgresStorage struct {
 	log  logger.LogrusLogger
 }
 
-func New(dsn string, lg logger.LogrusLogger) (*PostgresStorage, error) {
+func New(
+	dsn string,
+	lg logger.LogrusLogger,
+	cfgJWT config.JWTConfig,
+) (*PostgresStorage, error) {
 	if err := runMigrations(dsn); err != nil {
 		return nil, fmt.Errorf("failed to run DB migrations: %w", err)
 	}
@@ -29,6 +33,7 @@ func New(dsn string, lg logger.LogrusLogger) (*PostgresStorage, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create a connection pool: %w", err)
 	}
+
 	return &PostgresStorage{
 		pool: pool,
 		log:  lg,
@@ -56,12 +61,15 @@ func runMigrations(dsn string) error {
 	return nil
 }
 
-func (psg *PostgresStorage) Register(ctx context.Context, user user.User) error {
-	log := psg.log.LogrusLog
-
-	hashPassWD, err := user.HashPassword()
+func (psg *PostgresStorage) Register(ctx context.Context, userData user.User) (int, error) {
+	salt, err := user.CreateSalt()
 	if err != nil {
-		return fmt.Errorf("failed calc hash password: %w", err)
+		return 0, fmt.Errorf("failed generate salt for calc hash password: %w", err)
+	}
+
+	hashPassWD, err := userData.HashPassword(salt)
+	if err != nil {
+		return 0, fmt.Errorf("failed calc hash password: %w", err)
 	}
 
 	row := psg.pool.QueryRow(
@@ -70,26 +78,41 @@ func (psg *PostgresStorage) Register(ctx context.Context, user user.User) error 
 			VALUES ($1, $2)
 			RETURNING id;
 			`,
-		user.Login,
+		userData.Login,
 		hashPassWD,
 	)
 
-	var id string
+	var id int
 	err = row.Scan(&id)
 	if err != nil {
-		return fmt.Errorf("failed to scan row when create user: %w", err)
+		return 0, fmt.Errorf("failed to scan row when create user: %w", err)
 	}
-	log.WithFields(logrus.Fields{
-		"id":           id,
-		"login":        user.Login,
-		"hashPassword": hashPassWD,
-	}).Debug("register user")
 
-	return nil
+	return id, nil
 }
 
-func (psg *PostgresStorage) Login(user user.User) {
+func (psg *PostgresStorage) Login(userData user.User) (int, error) {
+	row := psg.pool.QueryRow(
+		context.TODO(),
+		`SELECT id, hashed_password FROM users 
+			WHERE user_login = $1;
+		`,
+		userData.Login,
+	)
 
+	var passWD string
+	var userID int
+	err := row.Scan(&userID, &passWD)
+	if err != nil {
+		return 0, fmt.Errorf("failed to scan row when login user: %w", err)
+	}
+
+	err = userData.CheckPassword(passWD)
+	if err != nil {
+		return 0, fmt.Errorf("failed check password: %w", err)
+	}
+
+	return userID, nil
 }
 
 func (psg *PostgresStorage) Ping() error {

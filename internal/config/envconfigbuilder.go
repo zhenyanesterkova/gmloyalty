@@ -1,7 +1,10 @@
 package config
 
 import (
+	"errors"
+	"fmt"
 	"os"
+	"time"
 )
 
 func (c *Config) setEnvServerConfig() {
@@ -25,8 +28,27 @@ func (c *Config) setDBConfig() {
 	}
 }
 
-func (c *Config) envBuild() {
+func (c *Config) setJWTConfig() error {
+	if key, ok := os.LookupEnv("SECRET_KEY"); ok {
+		c.JWTConfig.SecretKey = key
+	}
+	if exp, ok := os.LookupEnv("TOKEN_EXP"); ok {
+		dur, err := time.ParseDuration(exp + "s")
+		if err != nil {
+			return errors.New("can not parse token_exp as duration" + err.Error())
+		}
+		c.JWTConfig.TokenExp = dur
+	}
+	return nil
+}
+
+func (c *Config) envBuild() error {
 	c.setEnvServerConfig()
 	c.setEnvLoggerConfig()
 	c.setDBConfig()
+	err := c.setJWTConfig()
+	if err != nil {
+		return fmt.Errorf("failed set JWT config from env: %w", err)
+	}
+	return nil
 }

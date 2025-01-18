@@ -1,5 +1,5 @@
 package config
 
-type ClientConfig struct {
+type CliConfig struct {
 	Address string
 }

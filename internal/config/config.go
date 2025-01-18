@@ -10,7 +10,7 @@ type Config struct {
 	SConfig      ServerConfig
 	DBConfig     DBConfig
 	LConfig      LoggerConfig
-	ClientConfig ClientConfig
+	ClientConfig CliConfig
 	JWTConfig    JWTConfig
 	RetryConfig  RetryConfig
 }
@@ -33,7 +33,7 @@ func New() *Config {
 			TokenExp:  DefaultTokenExp * time.Hour,
 			SecretKey: DefaultSecretKey,
 		},
-		ClientConfig: ClientConfig{},
+		ClientConfig: CliConfig{},
 	}
 }
 

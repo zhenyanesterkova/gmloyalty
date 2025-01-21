@@ -29,6 +29,7 @@ type Repositorie interface {
 	Login(userData user.User) (int, error)
 	GetOrderByOrderNum(orderNum string) (order.Order, error)
 	AddOrder(orderData order.Order) error
+	UpdateOrder(orderData order.Order) error
 }
 
 type RepositorieHandler struct {

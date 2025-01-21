@@ -9,7 +9,7 @@ import (
 
 	"github.com/zhenyanesterkova/gmloyalty/internal/helper"
 	"github.com/zhenyanesterkova/gmloyalty/internal/middleware"
-	"github.com/zhenyanesterkova/gmloyalty/internal/myclient"
+	"github.com/zhenyanesterkova/gmloyalty/internal/service/order"
 )
 
 func (rh *RepositorieHandler) Orders(w http.ResponseWriter, r *http.Request) {
@@ -48,20 +48,8 @@ func (rh *RepositorieHandler) Orders(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		ordeAccrualrData, err := rh.accrual.GetOrderInfo(orderNum)
-		if err != nil {
-			if errors.Is(err, myclient.ErrNoContent) {
-				http.Error(w, TextNoContentError, http.StatusUnprocessableEntity)
-				return
-			}
-			log.Errorf("failed get points from accrual: %v", err)
-			http.Error(w, TextServerError, http.StatusInternalServerError)
-			return
-		}
-
-		orderData.Accrual = ordeAccrualrData.Accrual
-		orderData.Status = ordeAccrualrData.Status
-		orderData.Number = ordeAccrualrData.Number
+		orderData.Status = order.StatusNew
+		orderData.Number = orderNum
 		orderData.UserID = userID
 
 		err = rh.Repo.AddOrder(orderData)
@@ -70,6 +58,24 @@ func (rh *RepositorieHandler) Orders(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, TextServerError, http.StatusInternalServerError)
 			return
 		}
+
+		go func() {
+			ordeAccrualrData, err := rh.accrual.GetOrderInfo(orderNum)
+			if err != nil {
+				log.Errorf("failed get points from accrual: %v", err)
+			}
+
+			orderData.Accrual = ordeAccrualrData.Accrual
+			orderData.Status = ordeAccrualrData.Status
+
+			err = rh.Repo.AddOrder(orderData)
+			if err != nil {
+				log.Errorf("failed add order to orders: %v", err)
+				http.Error(w, TextServerError, http.StatusInternalServerError)
+				return
+			}
+		}()
+
 		w.WriteHeader(http.StatusAccepted)
 		return
 	}

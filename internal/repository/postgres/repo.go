@@ -159,6 +159,24 @@ func (psg *PostgresStorage) AddOrder(orderData order.Order) error {
 	return nil
 }
 
+func (psg *PostgresStorage) UpdateOrder(orderData order.Order) error {
+	_, err := psg.pool.Exec(
+		context.TODO(),
+		`UPDATE orders SET 
+			user_id = $1, 
+			order_status = $2
+		WHERE 
+			order_num = $3;`,
+		orderData.UserID,
+		orderData.Status,
+		orderData.Number,
+	)
+	if err != nil {
+		return fmt.Errorf("failed update order in orders: %w", err)
+	}
+	return nil
+}
+
 func (psg *PostgresStorage) Ping() error {
 	if err := psg.pool.Ping(context.TODO()); err != nil {
 		return fmt.Errorf("failed to ping the DB: %w", err)

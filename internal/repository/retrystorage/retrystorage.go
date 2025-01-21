@@ -124,6 +124,23 @@ func (rs *RetryStorage) AddOrder(orderData order.Order) error {
 	return nil
 }
 
+func (rs *RetryStorage) UpdateOrder(orderData order.Order) error {
+	err := rs.storage.UpdateOrder(orderData)
+	if rs.checkRetry(err) {
+		err = rs.retry(func() error {
+			err = rs.storage.UpdateOrder(orderData)
+			if err != nil {
+				return fmt.Errorf("failed retry add order to orders: %w", err)
+			}
+			return nil
+		})
+	}
+	if err != nil {
+		return fmt.Errorf("failed add order to orders: %w", err)
+	}
+	return nil
+}
+
 func (rs *RetryStorage) Ping() error {
 	err := rs.storage.Ping()
 	if rs.checkRetry(err) {

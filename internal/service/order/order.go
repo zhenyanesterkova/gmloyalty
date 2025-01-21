@@ -2,9 +2,17 @@ package order
 
 import "time"
 
+const (
+	StatusNew        = "NEW"
+	StatusProcessing = "PROCESSING"
+	StatusInvalid    = "INVALID"
+	StatusProcessed  = "PROCESSED"
+)
+
 type Order struct {
 	UploadTime time.Time `json:"uploaded_at"`
 	Status     string    `json:"status"`
-	Number     int64     `json:"number"`
+	Number     string    `json:"number"`
 	Accrual    float64   `json:"accrual"`
+	UserID     int       `json:"-"`
 }

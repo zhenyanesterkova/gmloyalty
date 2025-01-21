@@ -7,6 +7,7 @@ import (
 	"github.com/zhenyanesterkova/gmloyalty/internal/config"
 	"github.com/zhenyanesterkova/gmloyalty/internal/repository/postgres"
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/logger"
+	"github.com/zhenyanesterkova/gmloyalty/internal/service/order"
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/user"
 )
 
@@ -15,6 +16,8 @@ type Store interface {
 	Ping() error
 	Register(ctx context.Context, user user.User) (int, error)
 	Login(userData user.User) (int, error)
+	GetOrderByOrderNum(orderNum string) (order.Order, error)
+	AddOrder(orderData order.Order) error
 }
 
 func NewStore(

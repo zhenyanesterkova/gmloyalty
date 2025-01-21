@@ -36,7 +36,7 @@ func Accrual(address string) *AccrualStruct {
 }
 
 func (acc AccrualStruct) GetOrderInfo(orderNum string) (order.Order, error) {
-	url := fmt.Sprintf("http://%s/api/orders/%s", acc.address, orderNum)
+	url := fmt.Sprintf("%s/api/orders/%s", acc.address, orderNum)
 
 	req, err := http.NewRequest(http.MethodGet, url, http.NoBody)
 	if err != nil {

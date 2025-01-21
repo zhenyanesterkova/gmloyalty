@@ -63,16 +63,15 @@ func (rh *RepositorieHandler) Orders(w http.ResponseWriter, r *http.Request) {
 			ordeAccrualrData, err := rh.accrual.GetOrderInfo(orderNum)
 			if err != nil {
 				log.Errorf("failed get points from accrual: %v", err)
+				return
 			}
 
 			orderData.Accrual = ordeAccrualrData.Accrual
 			orderData.Status = ordeAccrualrData.Status
 
-			err = rh.Repo.AddOrder(orderData)
+			err = rh.Repo.UpdateOrder(orderData)
 			if err != nil {
-				log.Errorf("failed add order to orders: %v", err)
-				http.Error(w, TextServerError, http.StatusInternalServerError)
-				return
+				log.Errorf("failed update order in orders: %v", err)
 			}
 		}()
 

@@ -35,6 +35,20 @@ services:
     environment:
       RUN_ADDRESS3: "0.0.0.0:8083"
       DATABASE_URI: "postgres://gopher:gopher@loyaltyDB:5432/gopherloyalty?sslmode=disable"
+      ACCRUAL_SYSTEM_ADDRESS: "http://accrual:8080/"
+    networks:
+      - gmloyalty
+    restart: always
+
+  accrual:
+    container_name: accrual
+    build:
+      context: .
+      dockerfile: build/Dockerfile.accrual
+    environment:
+      - RUN_ADDRESS=0.0.0.0:8080
+    ports:
+      - 8080:8080
     networks:
       - gmloyalty
     restart: always

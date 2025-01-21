@@ -10,20 +10,26 @@ import (
 	"github.com/zhenyanesterkova/gmloyalty/internal/middleware"
 	"github.com/zhenyanesterkova/gmloyalty/internal/myclient"
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/logger"
+	"github.com/zhenyanesterkova/gmloyalty/internal/service/order"
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/session"
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/user"
 )
 
 const (
-	TextServerError        = "Something went wrong... Server error"
-	TextLoginError         = "User with this login already exists"
-	TextInvalidFormatError = "Invalid request format"
+	TextServerError         = "Something went wrong... Server error"
+	TextLoginError          = "User with this login already exists"
+	TextInvalidFormatError  = "Invalid request format"
+	TextNoContentError      = "There is no order with this number"
+	TextConflictUserIDError = "The order number has already been uploaded by another user"
 )
 
 type Repositorie interface {
 	Ping() error
 	Register(ctx context.Context, user user.User) (int, error)
 	Login(userData user.User) (int, error)
+	GetOrderByOrderNum(orderNum string) (order.Order, error)
+	AddOrder(orderData order.Order) error
+	UpdateOrder(orderData order.Order) error
 }
 
 type RepositorieHandler struct {
@@ -60,6 +66,7 @@ func (rh *RepositorieHandler) InitChiRouter(router *chi.Mux) {
 		r.Route("/api/user/", func(r chi.Router) {
 			r.Post("/register", rh.Register)
 			r.Post("/login", rh.Login)
+			r.Post("/orders", rh.Orders)
 		})
 	})
 }

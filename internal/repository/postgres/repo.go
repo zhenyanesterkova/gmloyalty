@@ -5,6 +5,7 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/zhenyanesterkova/gmloyalty/internal/config"
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/logger"
+	"github.com/zhenyanesterkova/gmloyalty/internal/service/order"
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/user"
 )
 
@@ -113,6 +115,66 @@ func (psg *PostgresStorage) Login(userData user.User) (int, error) {
 	}
 
 	return userID, nil
+}
+
+func (psg *PostgresStorage) GetOrderByOrderNum(orderNum string) (order.Order, error) {
+	row := psg.pool.QueryRow(
+		context.TODO(),
+		`SELECT order_status, upload_time, user_id FROM orders 
+			WHERE order_num = $1;
+		`,
+		orderNum,
+	)
+
+	var (
+		userID      int
+		orderStatus string
+		uploadTime  time.Time
+	)
+	err := row.Scan(&orderStatus, &uploadTime, &userID)
+	if err != nil {
+		return order.Order{}, fmt.Errorf("failed to scan row when get user by order num: %w", err)
+	}
+
+	return order.Order{
+		Number:     orderNum,
+		UploadTime: uploadTime,
+		Status:     orderStatus,
+		UserID:     userID,
+	}, nil
+}
+
+func (psg *PostgresStorage) AddOrder(orderData order.Order) error {
+	_, err := psg.pool.Exec(
+		context.TODO(),
+		`INSERT INTO orders (order_num, user_id, order_status)
+			VALUES ($1, $2, $3);`,
+		orderData.Number,
+		orderData.UserID,
+		orderData.Status,
+	)
+	if err != nil {
+		return fmt.Errorf("failed add order to orders: %w", err)
+	}
+	return nil
+}
+
+func (psg *PostgresStorage) UpdateOrder(orderData order.Order) error {
+	_, err := psg.pool.Exec(
+		context.TODO(),
+		`UPDATE orders SET 
+			user_id = $1, 
+			order_status = $2
+		WHERE 
+			order_num = $3;`,
+		orderData.UserID,
+		orderData.Status,
+		orderData.Number,
+	)
+	if err != nil {
+		return fmt.Errorf("failed update order in orders: %w", err)
+	}
+	return nil
 }
 
 func (psg *PostgresStorage) Ping() error {

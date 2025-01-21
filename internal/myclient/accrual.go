@@ -24,18 +24,19 @@ type AccrualStruct struct {
 
 type respStruct struct {
 	Status  string  `json:"status"`
-	Number  int64   `json:"order"`
+	Number  string  `json:"order"`
 	Accrual float64 `json:"accrual"`
 }
 
 func Accrual(address string) *AccrualStruct {
 	return &AccrualStruct{
 		address: address,
+		client:  &http.Client{},
 	}
 }
 
-func (acc AccrualStruct) GetCalculatingPoints(orderNum int64) (order.Order, error) {
-	url := fmt.Sprintf("http://%s/api/orders/%d/", acc.address, orderNum)
+func (acc AccrualStruct) GetOrderInfo(orderNum string) (order.Order, error) {
+	url := fmt.Sprintf("%s/api/orders/%s", acc.address, orderNum)
 
 	req, err := http.NewRequest(http.MethodGet, url, http.NoBody)
 	if err != nil {

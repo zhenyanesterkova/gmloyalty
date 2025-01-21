@@ -9,6 +9,7 @@ import (
 	"github.com/zhenyanesterkova/gmloyalty/internal/repository"
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/backoff"
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/logger"
+	"github.com/zhenyanesterkova/gmloyalty/internal/service/order"
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/user"
 )
 
@@ -87,6 +88,40 @@ func (rs *RetryStorage) Login(user user.User) (int, error) {
 		return 0, fmt.Errorf("failed login user: %w", err)
 	}
 	return userID, nil
+}
+
+func (rs *RetryStorage) GetOrderByOrderNum(orderNum string) (order.Order, error) {
+	orderData, err := rs.storage.GetOrderByOrderNum(orderNum)
+	if rs.checkRetry(err) {
+		err = rs.retry(func() error {
+			orderData, err = rs.storage.GetOrderByOrderNum(orderNum)
+			if err != nil {
+				return fmt.Errorf("failed retry get order by order num: %w", err)
+			}
+			return nil
+		})
+	}
+	if err != nil {
+		return order.Order{}, fmt.Errorf("failed get order by order num: %w", err)
+	}
+	return orderData, nil
+}
+
+func (rs *RetryStorage) AddOrder(orderData order.Order) error {
+	err := rs.storage.AddOrder(orderData)
+	if rs.checkRetry(err) {
+		err = rs.retry(func() error {
+			err = rs.storage.AddOrder(orderData)
+			if err != nil {
+				return fmt.Errorf("failed retry add order to orders: %w", err)
+			}
+			return nil
+		})
+	}
+	if err != nil {
+		return fmt.Errorf("failed add order to orders: %w", err)
+	}
+	return nil
 }
 
 func (rs *RetryStorage) Ping() error {

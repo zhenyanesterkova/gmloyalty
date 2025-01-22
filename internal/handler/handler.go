@@ -13,6 +13,7 @@ import (
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/order"
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/session"
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/user"
+	"github.com/zhenyanesterkova/gmloyalty/internal/service/wpool"
 )
 
 const (
@@ -21,21 +22,24 @@ const (
 	TextInvalidFormatError  = "Invalid request format"
 	TextNoContentError      = "There is no order with this number"
 	TextConflictUserIDError = "The order number has already been uploaded by another user"
+	CountWorkersInPool      = 20
 )
 
 type Repositorie interface {
 	Ping() error
+	Close() error
 	Register(ctx context.Context, user user.User) (int, error)
 	Login(userData user.User) (int, error)
 	GetOrderByOrderNum(orderNum string) (order.Order, error)
 	AddOrder(orderData order.Order) error
-	UpdateOrder(orderData order.Order) error
+	UpdateOrderStatus(orderData order.Order) error
+	ProcessingOrder(ctx context.Context, orderData order.Order) error
 }
 
 type RepositorieHandler struct {
 	Repo    Repositorie
 	Logger  logger.LogrusLogger
-	accrual *myclient.AccrualStruct
+	pool    *wpool.WorkerPool
 	jwtSess *session.SessionsJWT
 }
 
@@ -47,15 +51,22 @@ func NewRepositorieHandler(
 ) *RepositorieHandler {
 	jwtSession := session.NewSessionsJWT(cfgJWT)
 	acc := myclient.Accrual(accrualAddress)
+	pool := wpool.New(
+		rep,
+		log,
+		acc,
+		CountWorkersInPool,
+	)
 	return &RepositorieHandler{
 		Repo:    rep,
 		Logger:  log,
 		jwtSess: jwtSession,
-		accrual: acc,
+		pool:    pool,
 	}
 }
 
 func (rh *RepositorieHandler) InitChiRouter(router *chi.Mux) {
+	go rh.pool.Start(context.TODO())
 	mdlWare := middleware.NewMiddlewareStruct(rh.Logger, rh.jwtSess)
 	router.Use(mdlWare.ResetRespDataStruct)
 	router.Use(mdlWare.RequestLogger)

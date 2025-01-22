@@ -27,6 +27,13 @@ type User struct {
 	Password string `json:"password"`
 }
 
+type Accaunt struct {
+	ID        int
+	UserID    int
+	Balance   float64
+	Withdrawn float64
+}
+
 func (u User) CheckPassword(hashPasswordDB string) error {
 	passDB, err := hex.DecodeString(hashPasswordDB)
 	if err != nil {

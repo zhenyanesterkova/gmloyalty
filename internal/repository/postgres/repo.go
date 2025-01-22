@@ -264,18 +264,6 @@ func (psg *PostgresStorage) ProcessingOrder(ctx context.Context, orderData order
 
 	_, err = tx.Exec(
 		ctx,
-		`INSERT INTO orders (order_num, user_id, order_status)
-			VALUES ($1, $2, $3);`,
-		orderData.Number,
-		orderData.UserID,
-		orderData.Status,
-	)
-	if err != nil {
-		return fmt.Errorf("failed add order to orders in processing transaction: %w", err)
-	}
-
-	_, err = tx.Exec(
-		ctx,
 		`INSERT INTO history (order_num, item_type, sum) 
 		VALUES ($1, $2, $3);`,
 		orderData.Number,

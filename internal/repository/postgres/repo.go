@@ -10,7 +10,9 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
+	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/sirupsen/logrus"
 
 	"github.com/zhenyanesterkova/gmloyalty/internal/config"
 	"github.com/zhenyanesterkova/gmloyalty/internal/service/logger"
@@ -64,6 +66,8 @@ func runMigrations(dsn string) error {
 }
 
 func (psg *PostgresStorage) Register(ctx context.Context, userData user.User) (int, error) {
+	log := psg.log.LogrusLog
+
 	salt, err := user.CreateSalt()
 	if err != nil {
 		return 0, fmt.Errorf("failed generate salt for calc hash password: %w", err)
@@ -74,8 +78,22 @@ func (psg *PostgresStorage) Register(ctx context.Context, userData user.User) (i
 		return 0, fmt.Errorf("failed calc hash password: %w", err)
 	}
 
-	row := psg.pool.QueryRow(
-		context.TODO(),
+	tx, err := psg.pool.Begin(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed start a register transaction: %w", err)
+	}
+
+	defer func() {
+		err := tx.Rollback(ctx)
+		if err != nil {
+			if !errors.Is(err, pgx.ErrTxClosed) {
+				log.Errorf("failed rolls back the register transaction: %v", err)
+			}
+		}
+	}()
+
+	row := tx.QueryRow(
+		ctx,
 		`INSERT INTO users (user_login, hashed_password)
 			VALUES ($1, $2)
 			RETURNING id;
@@ -88,6 +106,26 @@ func (psg *PostgresStorage) Register(ctx context.Context, userData user.User) (i
 	err = row.Scan(&id)
 	if err != nil {
 		return 0, fmt.Errorf("failed to scan row when create user: %w", err)
+	}
+
+	row = tx.QueryRow(
+		ctx,
+		`INSERT INTO accounts (user_id, balance, withdrawn)
+			VALUES ($1, 0, 0)
+			RETURNING id;
+			`,
+		id,
+	)
+
+	var idAccaunts int
+	err = row.Scan(&idAccaunts)
+	if err != nil {
+		return 0, fmt.Errorf("failed to scan row when create user accaunt: %w", err)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed commits the transaction register user: %w", err)
 	}
 
 	return id, nil
@@ -115,6 +153,25 @@ func (psg *PostgresStorage) Login(userData user.User) (int, error) {
 	}
 
 	return userID, nil
+}
+
+func (psg *PostgresStorage) GetUserAccaunt(userID int) (user.Accaunt, error) {
+	row := psg.pool.QueryRow(
+		context.TODO(),
+		`SELECT id, balance, withdrawn FROM accounts 
+			WHERE user_id = $1;
+		`,
+		userID,
+	)
+
+	acc := user.Accaunt{}
+	acc.UserID = userID
+	err := row.Scan(&acc.ID, &acc.Balance, &acc.Withdrawn)
+	if err != nil {
+		return user.Accaunt{}, fmt.Errorf("failed to scan row when get user accaunt by userID: %w", err)
+	}
+
+	return acc, nil
 }
 
 func (psg *PostgresStorage) GetOrderByOrderNum(orderNum string) (order.Order, error) {
@@ -159,20 +216,105 @@ func (psg *PostgresStorage) AddOrder(orderData order.Order) error {
 	return nil
 }
 
-func (psg *PostgresStorage) UpdateOrder(orderData order.Order) error {
+func (psg *PostgresStorage) UpdateOrderStatus(orderData order.Order) error {
 	_, err := psg.pool.Exec(
 		context.TODO(),
-		`UPDATE orders SET 
-			user_id = $1, 
-			order_status = $2
+		`UPDATE orders SET
+			order_status = $1
 		WHERE 
-			order_num = $3;`,
-		orderData.UserID,
+			order_num = $2;`,
 		orderData.Status,
 		orderData.Number,
 	)
 	if err != nil {
 		return fmt.Errorf("failed update order in orders: %w", err)
+	}
+	return nil
+}
+
+func (psg *PostgresStorage) ProcessingOrder(ctx context.Context, orderData order.Order) error {
+	log := psg.log.LogrusLog
+
+	log.Debug("start save info about order to DB ...")
+
+	log.WithFields(logrus.Fields{
+		"Number":  orderData.Number,
+		"Status":  orderData.Status,
+		"Accrual": orderData.Accrual,
+	}).Info("set order info")
+
+	accaunt, err := psg.GetUserAccaunt(orderData.UserID)
+	if err != nil {
+		return fmt.Errorf("failed get accaunt to process order: %w", err)
+	}
+
+	tx, err := psg.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed start a processing order transaction: %w", err)
+	}
+
+	defer func() {
+		errRollback := tx.Rollback(ctx)
+		if errRollback != nil {
+			if !errors.Is(errRollback, pgx.ErrTxClosed) {
+				log.Errorf("failed rolls back the processing order transaction: %v", errRollback)
+			}
+		}
+	}()
+
+	_, err = tx.Exec(
+		ctx,
+		`INSERT INTO orders (order_num, user_id, order_status)
+			VALUES ($1, $2, $3);`,
+		orderData.Number,
+		orderData.UserID,
+		orderData.Status,
+	)
+	if err != nil {
+		return fmt.Errorf("failed add order to orders in processing transaction: %w", err)
+	}
+
+	_, err = tx.Exec(
+		ctx,
+		`INSERT INTO history (order_num, item_type, sum) 
+		VALUES ($1, $2, $3);`,
+		orderData.Number,
+		"accrual",
+		orderData.Accrual,
+	)
+	if err != nil {
+		return fmt.Errorf("failed exec query add history item in processing order transaction: %w", err)
+	}
+
+	_, err = tx.Exec(
+		ctx,
+		`UPDATE accounts SET
+			balance = $1
+		WHERE 
+			id = $2;`,
+		accaunt.Balance+orderData.Accrual,
+		accaunt.ID,
+	)
+	if err != nil {
+		return fmt.Errorf("failed exec query update user accaut in processing order transaction: %w", err)
+	}
+
+	_, err = tx.Exec(
+		ctx,
+		`UPDATE orders SET
+			order_status = $1
+		WHERE 
+			order_num = $2;`,
+		orderData.Status,
+		orderData.Number,
+	)
+	if err != nil {
+		return fmt.Errorf("failed update order in orders in processing order transaction: %w", err)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return fmt.Errorf("failed commits the transaction processing order: %w", err)
 	}
 	return nil
 }

@@ -124,11 +124,11 @@ func (rs *RetryStorage) AddOrder(orderData order.Order) error {
 	return nil
 }
 
-func (rs *RetryStorage) UpdateOrder(orderData order.Order) error {
-	err := rs.storage.UpdateOrder(orderData)
+func (rs *RetryStorage) UpdateOrderStatus(orderData order.Order) error {
+	err := rs.storage.UpdateOrderStatus(orderData)
 	if rs.checkRetry(err) {
 		err = rs.retry(func() error {
-			err = rs.storage.UpdateOrder(orderData)
+			err = rs.storage.UpdateOrderStatus(orderData)
 			if err != nil {
 				return fmt.Errorf("failed retry add order to orders: %w", err)
 			}
@@ -137,6 +137,23 @@ func (rs *RetryStorage) UpdateOrder(orderData order.Order) error {
 	}
 	if err != nil {
 		return fmt.Errorf("failed add order to orders: %w", err)
+	}
+	return nil
+}
+
+func (rs *RetryStorage) ProcessingOrder(ctx context.Context, orderData order.Order) error {
+	err := rs.storage.ProcessingOrder(ctx, orderData)
+	if rs.checkRetry(err) {
+		err = rs.retry(func() error {
+			err = rs.storage.ProcessingOrder(ctx, orderData)
+			if err != nil {
+				return fmt.Errorf("failed retry processing order: %w", err)
+			}
+			return nil
+		})
+	}
+	if err != nil {
+		return fmt.Errorf("failed processing order: %w", err)
 	}
 	return nil
 }

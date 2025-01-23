@@ -20,6 +20,7 @@ type Store interface {
 	AddOrder(orderData order.Order) error
 	UpdateOrderStatus(orderData order.Order) error
 	ProcessingOrder(ctx context.Context, orderData order.Order) error
+	GetOrderList(userID int) ([]order.Order, error)
 }
 
 func NewStore(

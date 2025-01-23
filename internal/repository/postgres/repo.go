@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"embed"
 	"errors"
 	"fmt"
@@ -335,7 +336,7 @@ func (psg *PostgresStorage) GetOrderList(userID int) ([]order.Order, error) {
 		orderStatus  string
 		uploadTime   time.Time
 		userIDFromDB int
-		sum          float64
+		sum          sql.NullFloat64
 	)
 	for rows.Next() {
 		err := rows.Scan(
@@ -353,7 +354,7 @@ func (psg *PostgresStorage) GetOrderList(userID int) ([]order.Order, error) {
 			Status:     orderStatus,
 			UploadTime: uploadTime,
 			UserID:     userIDFromDB,
-			Accrual:    sum,
+			Accrual:    sum.Float64,
 		})
 	}
 

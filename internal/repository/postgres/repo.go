@@ -318,8 +318,8 @@ func (psg *PostgresStorage) GetOrderList(userID int) ([]order.Order, error) {
 			history.sum
 		FROM orders
 		LEFT JOIN history
-		ON orders.order_num = history.order_num
-		WHERE orders.user_id = $1 AND history.item_type = 'accrual'
+		ON orders.order_num = history.order_num AND history.item_type != 'withdrawn'
+		WHERE orders.user_id = $1 
 		ORDER BY orders.upload_time DESC;
 		`,
 		userID,

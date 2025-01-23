@@ -18,6 +18,7 @@ type Order struct {
 }
 
 type Withdraw struct {
-	Number string  `json:"order"`
-	Sum    float64 `json:"sum"`
+	Timestamp time.Time `json:"processed_at,omitempty"`
+	Number    string    `json:"order"`
+	Sum       float64   `json:"sum"`
 }

@@ -25,6 +25,9 @@ const (
 	TextNoContentError      = "There is no order with this number"
 	TextConflictUserIDError = "The order number has already been uploaded by another user"
 	CountWorkersInPool      = 20
+	ContentTypeText         = "text/plain"
+	ContentTypeJSON         = "application/json"
+	ContentType             = "Content-Type"
 )
 
 type Repositorie interface {
@@ -39,6 +42,7 @@ type Repositorie interface {
 	GetOrderList(userID int) ([]order.Order, error)
 	GetUserAccaunt(userID int) (user.Accaunt, error)
 	Withdraw(ctx context.Context, userID int, withdrawInst order.Withdraw) error
+	Withdrawals(ctx context.Context, userID int) ([]order.Withdraw, error)
 }
 
 type RepositorieHandler struct {
@@ -86,6 +90,7 @@ func (rh *RepositorieHandler) InitChiRouter(router *chi.Mux) {
 			r.Get("/orders", rh.GetOrderList)
 			r.Get("/balance", rh.GetBalance)
 			r.Post("/balance/withdraw", rh.Withdraw)
+			r.Get("/withdrawals", rh.GetWithdrawals)
 		})
 	})
 }

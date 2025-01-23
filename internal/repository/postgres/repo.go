@@ -429,6 +429,51 @@ func (psg *PostgresStorage) Withdraw(ctx context.Context, userID int, withdrawIn
 	return nil
 }
 
+func (psg *PostgresStorage) Withdrawals(ctx context.Context, userID int) ([]order.Withdraw, error) {
+	rows, err := psg.pool.Query(
+		ctx,
+		`SELECT 
+			history.order_num, 
+			history.sum,
+			history.item_timestamp
+		FROM history
+		INNER JOIN orders
+		ON orders.order_num = history.order_num AND history.item_type = 'withdrawn'
+		WHERE orders.user_id = $1
+		ORDER BY orders.upload_time DESC;
+		`,
+		userID,
+	)
+	if err != nil {
+		return []order.Withdraw{}, fmt.Errorf("failed query get withdrawals: %w", err)
+	}
+	defer rows.Close()
+
+	withdrawals := []order.Withdraw{}
+	var (
+		orderNum   string
+		uploadTime time.Time
+		sum        sql.NullFloat64
+	)
+	for rows.Next() {
+		err := rows.Scan(
+			&orderNum,
+			&sum,
+			&uploadTime,
+		)
+		if err != nil {
+			return []order.Withdraw{}, fmt.Errorf("failed scan rows when get withdrawals: %w", err)
+		}
+		withdrawals = append(withdrawals, order.Withdraw{
+			Number:    orderNum,
+			Timestamp: uploadTime,
+			Sum:       sum.Float64,
+		})
+	}
+
+	return withdrawals, nil
+}
+
 func (psg *PostgresStorage) Ping() error {
 	if err := psg.pool.Ping(context.TODO()); err != nil {
 		return fmt.Errorf("failed to ping the DB: %w", err)

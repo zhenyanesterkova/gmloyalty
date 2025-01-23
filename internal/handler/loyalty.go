@@ -28,7 +28,7 @@ func (rh *RepositorieHandler) Orders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Header.Get("Content-Type") != "text/plain" ||
+	if r.Header.Get(ContentType) != ContentTypeText ||
 		len(orderNumBytes) == 0 {
 		http.Error(w, "content-type must be text/plain and lenght of order number should not be zero", http.StatusBadRequest)
 		return
@@ -99,7 +99,7 @@ func (rh *RepositorieHandler) GetOrderList(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(ContentType, ContentTypeJSON)
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(orderList); err != nil {
@@ -124,7 +124,7 @@ func (rh *RepositorieHandler) GetBalance(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(ContentType, ContentTypeJSON)
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(accaunt); err != nil {
@@ -176,6 +176,36 @@ func (rh *RepositorieHandler) Withdraw(w http.ResponseWriter, r *http.Request) {
 	err = rh.Repo.Withdraw(r.Context(), userID, withdraw)
 	if err != nil {
 		log.Errorf("failed withdraw %v", err)
+		http.Error(w, TextServerError, http.StatusInternalServerError)
+		return
+	}
+}
+
+func (rh *RepositorieHandler) GetWithdrawals(w http.ResponseWriter, r *http.Request) {
+	log := rh.Logger.LogrusLog
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(int)
+	if !ok {
+		http.Error(w, TextNoAuthError, http.StatusUnauthorized)
+		return
+	}
+
+	withdrawals, err := rh.Repo.Withdrawals(r.Context(), userID)
+	if err != nil {
+		log.Errorf("failed get withdrawals: %v", err)
+		http.Error(w, TextServerError, http.StatusInternalServerError)
+		return
+	}
+
+	if len(withdrawals) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	w.Header().Set(ContentType, ContentTypeJSON)
+
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(withdrawals); err != nil {
+		log.Errorf("error encode withdrawals in get withdrawals handler - %v", err)
 		http.Error(w, TextServerError, http.StatusInternalServerError)
 		return
 	}

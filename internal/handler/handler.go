@@ -90,7 +90,7 @@ func (rh *RepositorieHandler) InitChiRouter(router *chi.Mux) {
 			r.Get("/orders", rh.GetOrderList)
 			r.Get("/balance", rh.GetBalance)
 			r.Post("/balance/withdraw", rh.Withdraw)
-			r.Post("/withdrawals", rh.GetWithdrawals)
+			r.Get("/withdrawals", rh.GetWithdrawals)
 		})
 	})
 }

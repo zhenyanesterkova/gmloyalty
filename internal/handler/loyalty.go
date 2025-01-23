@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -76,4 +77,34 @@ func (rh *RepositorieHandler) Orders(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func (rh *RepositorieHandler) GetOrderList(w http.ResponseWriter, r *http.Request) {
+	log := rh.Logger.LogrusLog
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(int)
+	if !ok {
+		http.Error(w, "No auth", http.StatusUnauthorized)
+		return
+	}
+
+	orderList, err := rh.Repo.GetOrderList(userID)
+	if err != nil {
+		log.Errorf("failed get order list from DB: %v", err)
+		http.Error(w, TextServerError, http.StatusInternalServerError)
+		return
+	}
+
+	if len(orderList) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(orderList); err != nil {
+		log.Errorf("error encode order list in get order list handler - %v", err)
+		http.Error(w, TextServerError, http.StatusInternalServerError)
+		return
+	}
 }

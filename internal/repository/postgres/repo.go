@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"embed"
 	"errors"
 	"fmt"
@@ -305,6 +306,59 @@ func (psg *PostgresStorage) ProcessingOrder(ctx context.Context, orderData order
 		return fmt.Errorf("failed commits the transaction processing order: %w", err)
 	}
 	return nil
+}
+
+func (psg *PostgresStorage) GetOrderList(userID int) ([]order.Order, error) {
+	rows, err := psg.pool.Query(
+		context.TODO(),
+		`SELECT 
+			orders.order_num, 
+			orders.order_status, 
+			orders.upload_time, 
+			orders.user_id, 
+			history.sum
+		FROM orders
+		LEFT JOIN history
+		ON orders.order_num = history.order_num AND history.item_type != 'withdrawn'
+		WHERE orders.user_id = $1 
+		ORDER BY orders.upload_time DESC;
+		`,
+		userID,
+	)
+	if err != nil {
+		return []order.Order{}, fmt.Errorf("failed query get orders list: %w", err)
+	}
+	defer rows.Close()
+
+	orderList := []order.Order{}
+	var (
+		orderNum     string
+		orderStatus  string
+		uploadTime   time.Time
+		userIDFromDB int
+		sum          sql.NullFloat64
+	)
+	for rows.Next() {
+		err := rows.Scan(
+			&orderNum,
+			&orderStatus,
+			&uploadTime,
+			&userIDFromDB,
+			&sum,
+		)
+		if err != nil {
+			return []order.Order{}, fmt.Errorf("failed scan rows when get orders list: %w", err)
+		}
+		orderList = append(orderList, order.Order{
+			Number:     orderNum,
+			Status:     orderStatus,
+			UploadTime: uploadTime,
+			UserID:     userIDFromDB,
+			Accrual:    sum.Float64,
+		})
+	}
+
+	return orderList, nil
 }
 
 func (psg *PostgresStorage) Ping() error {

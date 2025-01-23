@@ -13,6 +13,6 @@ type Order struct {
 	UploadTime time.Time `json:"uploaded_at"`
 	Status     string    `json:"status"`
 	Number     string    `json:"number"`
-	Accrual    float64   `json:"accrual"`
+	Accrual    float64   `json:"accrual,omitempty"`
 	UserID     int       `json:"-"`
 }

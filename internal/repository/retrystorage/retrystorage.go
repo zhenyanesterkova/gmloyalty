@@ -158,6 +158,23 @@ func (rs *RetryStorage) ProcessingOrder(ctx context.Context, orderData order.Ord
 	return nil
 }
 
+func (rs *RetryStorage) GetOrderList(userID int) ([]order.Order, error) {
+	orderList, err := rs.storage.GetOrderList(userID)
+	if rs.checkRetry(err) {
+		err = rs.retry(func() error {
+			orderList, err = rs.storage.GetOrderList(userID)
+			if err != nil {
+				return fmt.Errorf("failed get order list: %w", err)
+			}
+			return nil
+		})
+	}
+	if err != nil {
+		return []order.Order{}, fmt.Errorf("failed get order list: %w", err)
+	}
+	return orderList, nil
+}
+
 func (rs *RetryStorage) Ping() error {
 	err := rs.storage.Ping()
 	if rs.checkRetry(err) {

@@ -18,7 +18,9 @@ import (
 
 const (
 	TextServerError         = "Something went wrong... Server error"
+	TextFewPointsError      = "Not enough points to deduct"
 	TextLoginError          = "User with this login already exists"
+	TextNoAuthError         = "No auth"
 	TextInvalidFormatError  = "Invalid request format"
 	TextNoContentError      = "There is no order with this number"
 	TextConflictUserIDError = "The order number has already been uploaded by another user"
@@ -36,6 +38,7 @@ type Repositorie interface {
 	ProcessingOrder(ctx context.Context, orderData order.Order) error
 	GetOrderList(userID int) ([]order.Order, error)
 	GetUserAccaunt(userID int) (user.Accaunt, error)
+	Withdraw(ctx context.Context, userID int, withdrawInst order.Withdraw) error
 }
 
 type RepositorieHandler struct {
@@ -82,6 +85,7 @@ func (rh *RepositorieHandler) InitChiRouter(router *chi.Mux) {
 			r.Post("/orders", rh.Orders)
 			r.Get("/orders", rh.GetOrderList)
 			r.Get("/balance", rh.GetBalance)
+			r.Post("/balance/withdraw", rh.Withdraw)
 		})
 	})
 }

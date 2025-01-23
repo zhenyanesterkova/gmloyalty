@@ -192,6 +192,23 @@ func (rs *RetryStorage) GetUserAccaunt(userID int) (user.Accaunt, error) {
 	return accaunt, nil
 }
 
+func (rs *RetryStorage) Withdraw(ctx context.Context, userID int, withdrawInst order.Withdraw) error {
+	err := rs.storage.Withdraw(ctx, userID, withdrawInst)
+	if rs.checkRetry(err) {
+		err = rs.retry(func() error {
+			err = rs.storage.Withdraw(ctx, userID, withdrawInst)
+			if err != nil {
+				return fmt.Errorf("failed retry withdraw: %w", err)
+			}
+			return nil
+		})
+	}
+	if err != nil {
+		return fmt.Errorf("failed withdraw: %w", err)
+	}
+	return nil
+}
+
 func (rs *RetryStorage) Ping() error {
 	err := rs.storage.Ping()
 	if rs.checkRetry(err) {

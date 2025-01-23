@@ -361,6 +361,74 @@ func (psg *PostgresStorage) GetOrderList(userID int) ([]order.Order, error) {
 	return orderList, nil
 }
 
+func (psg *PostgresStorage) Withdraw(ctx context.Context, userID int, withdrawInst order.Withdraw) error {
+	log := psg.log.LogrusLog
+
+	accaunt, err := psg.GetUserAccaunt(userID)
+	if err != nil {
+		return fmt.Errorf("failed get accaunt to add withdraw: %w", err)
+	}
+
+	tx, err := psg.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed start add withdraw transaction: %w", err)
+	}
+
+	defer func() {
+		errRollback := tx.Rollback(ctx)
+		if errRollback != nil {
+			if !errors.Is(errRollback, pgx.ErrTxClosed) {
+				log.Errorf("failed rolls back add withdraw transaction: %v", errRollback)
+			}
+		}
+	}()
+
+	_, err = tx.Exec(
+		ctx,
+		`INSERT INTO orders (order_num, user_id, order_status)
+			VALUES ($1, $2, $3);`,
+		withdrawInst.Number,
+		userID,
+		order.StatusNew,
+	)
+	if err != nil {
+		return fmt.Errorf("failed add order to orders in add withdraw transaction: %w", err)
+	}
+
+	_, err = tx.Exec(
+		ctx,
+		`INSERT INTO history (order_num, item_type, sum) 
+		VALUES ($1, $2, $3);`,
+		withdrawInst.Number,
+		"withdrawn",
+		withdrawInst.Sum,
+	)
+	if err != nil {
+		return fmt.Errorf("failed exec query add history item in add withdraw transaction: %w", err)
+	}
+
+	_, err = tx.Exec(
+		ctx,
+		`UPDATE accounts SET
+			balance = $1,
+			withdrawn = $2
+		WHERE 
+			id = $3;`,
+		accaunt.Balance-withdrawInst.Sum,
+		accaunt.Withdrawn+withdrawInst.Sum,
+		accaunt.ID,
+	)
+	if err != nil {
+		return fmt.Errorf("failed exec query update user accaunt in add withdraw transaction: %w", err)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return fmt.Errorf("failed commits the transaction add withdraw: %w", err)
+	}
+	return nil
+}
+
 func (psg *PostgresStorage) Ping() error {
 	if err := psg.pool.Ping(context.TODO()); err != nil {
 		return fmt.Errorf("failed to ping the DB: %w", err)

@@ -16,3 +16,8 @@ type Order struct {
 	Accrual    float64   `json:"accrual,omitempty"`
 	UserID     int       `json:"-"`
 }
+
+type Withdraw struct {
+	Number string  `json:"order"`
+	Sum    float64 `json:"sum"`
+}

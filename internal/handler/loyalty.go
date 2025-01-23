@@ -108,3 +108,28 @@ func (rh *RepositorieHandler) GetOrderList(w http.ResponseWriter, r *http.Reques
 		return
 	}
 }
+
+func (rh *RepositorieHandler) GetBalance(w http.ResponseWriter, r *http.Request) {
+	log := rh.Logger.LogrusLog
+	userID, ok := r.Context().Value(middleware.UserIDContextKey).(int)
+	if !ok {
+		http.Error(w, "No auth", http.StatusUnauthorized)
+		return
+	}
+
+	accaunt, err := rh.Repo.GetUserAccaunt(userID)
+	if err != nil {
+		log.Errorf("failed get user accaunt: %v", err)
+		http.Error(w, TextServerError, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(accaunt); err != nil {
+		log.Errorf("error encode accaunt in get balance handler - %v", err)
+		http.Error(w, TextServerError, http.StatusInternalServerError)
+		return
+	}
+}

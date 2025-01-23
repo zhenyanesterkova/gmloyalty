@@ -21,6 +21,7 @@ type Store interface {
 	UpdateOrderStatus(orderData order.Order) error
 	ProcessingOrder(ctx context.Context, orderData order.Order) error
 	GetOrderList(userID int) ([]order.Order, error)
+	GetUserAccaunt(userID int) (user.Accaunt, error)
 }
 
 func NewStore(

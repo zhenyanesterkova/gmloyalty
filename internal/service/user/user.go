@@ -28,10 +28,10 @@ type User struct {
 }
 
 type Accaunt struct {
-	ID        int
-	UserID    int
-	Balance   float64
-	Withdrawn float64
+	ID        int     `json:"-"`
+	UserID    int     `json:"-"`
+	Balance   float64 `json:"current"`
+	Withdrawn float64 `json:"withdrawn"`
 }
 
 func (u User) CheckPassword(hashPasswordDB string) error {

@@ -175,6 +175,23 @@ func (rs *RetryStorage) GetOrderList(userID int) ([]order.Order, error) {
 	return orderList, nil
 }
 
+func (rs *RetryStorage) GetUserAccaunt(userID int) (user.Accaunt, error) {
+	accaunt, err := rs.storage.GetUserAccaunt(userID)
+	if rs.checkRetry(err) {
+		err = rs.retry(func() error {
+			accaunt, err = rs.storage.GetUserAccaunt(userID)
+			if err != nil {
+				return fmt.Errorf("failed retry get user accaunt: %w", err)
+			}
+			return nil
+		})
+	}
+	if err != nil {
+		return user.Accaunt{}, fmt.Errorf("failed get user accaunt: %w", err)
+	}
+	return accaunt, nil
+}
+
 func (rs *RetryStorage) Ping() error {
 	err := rs.storage.Ping()
 	if rs.checkRetry(err) {

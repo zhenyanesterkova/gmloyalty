@@ -35,6 +35,7 @@ type Repositorie interface {
 	UpdateOrderStatus(orderData order.Order) error
 	ProcessingOrder(ctx context.Context, orderData order.Order) error
 	GetOrderList(userID int) ([]order.Order, error)
+	GetUserAccaunt(userID int) (user.Accaunt, error)
 }
 
 type RepositorieHandler struct {
@@ -80,6 +81,7 @@ func (rh *RepositorieHandler) InitChiRouter(router *chi.Mux) {
 			r.Post("/login", rh.Login)
 			r.Post("/orders", rh.Orders)
 			r.Get("/orders", rh.GetOrderList)
+			r.Get("/balance", rh.GetBalance)
 		})
 	})
 }

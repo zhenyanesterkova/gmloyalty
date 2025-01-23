@@ -209,6 +209,23 @@ func (rs *RetryStorage) Withdraw(ctx context.Context, userID int, withdrawInst o
 	return nil
 }
 
+func (rs *RetryStorage) Withdrawals(ctx context.Context, userID int) ([]order.Withdraw, error) {
+	withdrawals, err := rs.storage.Withdrawals(ctx, userID)
+	if rs.checkRetry(err) {
+		err = rs.retry(func() error {
+			withdrawals, err = rs.storage.Withdrawals(ctx, userID)
+			if err != nil {
+				return fmt.Errorf("failed retry get withdrawals: %w", err)
+			}
+			return nil
+		})
+	}
+	if err != nil {
+		return withdrawals, fmt.Errorf("failed get withdrawals: %w", err)
+	}
+	return withdrawals, nil
+}
+
 func (rs *RetryStorage) Ping() error {
 	err := rs.storage.Ping()
 	if rs.checkRetry(err) {

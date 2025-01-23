@@ -23,6 +23,7 @@ type Store interface {
 	GetOrderList(userID int) ([]order.Order, error)
 	GetUserAccaunt(userID int) (user.Accaunt, error)
 	Withdraw(ctx context.Context, userID int, withdrawInst order.Withdraw) error
+	Withdrawals(ctx context.Context, userID int) ([]order.Withdraw, error)
 }
 
 func NewStore(

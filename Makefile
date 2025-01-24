@@ -33,12 +33,6 @@ golangci-lint-clean:
 
 # Имя исполняемого файла
 BINARY_NAME=gmloyalty
-#DATABASE_URI
-export d
-#RUN_ADDRESS
-export a
-#ACCRUAL_SYSTEM_ADDRESS
-export r
 
 # Цель по умолчанию
 .PHONY: all
@@ -72,4 +66,8 @@ clean:
 .PHONY: run
 run: build 
 	@echo "==> Running the project..." 
-	@./cmd/gophermart/$(BINARY_NAME) -d="${d}" -a="${a}" -r="${r}"
+	@./cmd/gophermart/$(BINARY_NAME)
+
+.PHONY: compose-run
+compose-run: 
+	docker-compose up 

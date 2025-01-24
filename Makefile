@@ -28,4 +28,46 @@ _golangci-lint-rm-unformatted-report: _golangci-lint-format-report
 
 .PHONY: golangci-lint-clean
 golangci-lint-clean:
-	sudo rm -rf ./golangci-lint 
+	sudo rm -rf ./golangci-lint
+
+
+# Имя исполняемого файла
+BINARY_NAME=gmloyalty
+
+# Цель по умолчанию
+.PHONY: all
+all: build
+
+# Установка зависимостей
+.PHONY: deps
+deps: 
+	@echo "==> Installing dependencies..." 
+	@go mod tidy
+
+# Компиляция проекта
+.PHONY: build
+build: deps 
+	@echo "==> Building the project..." 
+	@go build -o ./cmd/gophermart/$(BINARY_NAME) ./cmd/gophermart/main.go
+
+# Запуск тестов
+.PHONY: test
+test: 
+	@echo "==> Running tests..." 
+	@go test ./...
+
+# Очистка
+.PHONY: clean
+clean: 
+	@echo "==> Cleaning up..." 
+	@rm -f ./cmd/gophermart/$(BINARY_NAME)
+
+# Запуск проекта (конфигурирование через переменные окружения)
+.PHONY: run
+run: build 
+	@echo "==> Running the project..." 
+	@./cmd/gophermart/$(BINARY_NAME)
+
+.PHONY: compose-run
+compose-run: 
+	docker-compose up 
